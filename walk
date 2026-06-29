@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+is_dir() { [[ -d "$1" ]]; }
+is_set() { [[ -n "$1" ]]; }
+is_empty_array() { [[ 0 == "${#@}" ]]; }
+
+
+depth_first() {
+    for d in "$@"; do
+        #shopt -s globstar
+        for f in "${d%/}/"**; do
+            if is_dir "$f"; then
+                echo "$f"
+                main "$f"
+            else
+                echo "$f"
+            fi
+        done
+    done
+}
+
+bredth_first() {
+    local depth="$1"; shift
+    local stack=( "$@" )
+    local stack2=()
+    while ((depth-- >= 0 && ${#stack[@]} > 0 )); do
+        for d in "${stack[@]}"; do
+            for f in "${d%/}/"*; do
+                if is_dir "$f"; then
+                    echo "$f"
+                    stack2+=("$f")
+                else
+                    echo "$f"
+                fi
+            done
+        done
+        stack=( "${stack2[@]}" )
+        stack2=()
+    done
+}
+
+main() {
+    local depth=1000000
+    if [[ "$1" =~ (-d|--depth) ]]; then
+        shift
+        depth="$1"
+        shift
+    fi
+    if [[ "$1" =~ (-h|--help) ]]; then
+        echo "walks dirs depth first"
+        echo "If no dir is provided then walks the current dir"
+        echo "depth can be limit using -d or --depth"
+        echo "To show Usage -h or --help"
+        exit
+    fi
+    if is_empty_array "$@"; then
+        bredth_first $depth "./"
+    else
+        bredth_first $depth "$@"
+    fi
+}; main "$@"

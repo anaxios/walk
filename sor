@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -ue
+
+main() {
+    local f
+    while read -r f; do
+        for t in "$@"; do
+            #if [[ -z "$t" ]]; then continue 2; fi
+            #if eval ""$t" \"$f\""; then
+            if { $t "$f"; };then
+                echo "$f"
+                continue 2
+            fi
+        done
+    done
+}; main "$@"
