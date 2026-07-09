@@ -4,33 +4,41 @@ is_dir() { [[ -d "$1" ]]; }
 is_set() { [[ -n "$1" ]]; }
 is_empty_array() { [[ 0 == "${#@}" ]]; }
 
-
-depth_first() {
-    for d in "$@"; do
-        #shopt -s globstar
-        for f in "${d%/}/"**; do
-            if is_dir "$f"; then
-                echo "$f"
-                main "$f"
-            else
-                echo "$f"
-            fi
-        done
-    done
+write() {
+    if is_set "$NULL_TERMINATED"; then
+        printf '%s\0' "$1"
+    else
+        printf '%s\n' "$1"
+    fi
 }
 
-bredth_first() {
+
+#depth_first() {
+#    for d in "$@"; do
+#        #shopt -s globstar
+#        for f in "${d%/}/"**; do
+#            if is_dir "$f"; then
+#                write "$f"
+#                depth_first "$f"
+#            else
+#                write "$f"
+#            fi
+#        done
+#    done
+#}
+
+breadth_first() {
     local depth="$1"; shift
     local stack=( "$@" )
     local stack2=()
     while ((depth-- >= 0 && ${#stack[@]} > 0 )); do
         for d in "${stack[@]}"; do
-            for f in "${d%/}/"*; do
+            for f in "${d%/}"/*; do
                 if is_dir "$f"; then
-                    echo "$f"
+                    write "$f"
                     stack2+=("$f")
                 else
-                    echo "$f"
+                    write "$f"
                 fi
             done
         done
@@ -39,23 +47,44 @@ bredth_first() {
     done
 }
 
+print_help() {
+    echo "DESCRIPTION"
+    echo "  Walks dirs recursively breadth first."
+    echo "  More than one dir can be walked e.g. walk /path/to/dir1/ /path/to/dir2/"
+    echo "  If no dir is provided then walks the current dir."
+    echo "OPTIONS"
+    echo -e "  -d\tLimit depth of search."
+    echo -e "  -0\tOutput null terminated string."
+    echo -e "  -h\tShow Usage."
+}
+
 main() {
     local depth=1000000
-    if [[ "$1" =~ (-d|--depth) ]]; then
-        shift
-        depth="$1"
-        shift
-    fi
-    if [[ "$1" =~ (-h|--help) ]]; then
-        echo "walks dirs depth first"
-        echo "If no dir is provided then walks the current dir"
-        echo "depth can be limit using -d or --depth"
-        echo "To show Usage -h or --help"
-        exit
-    fi
+
+    local opt
+    while getopts "h0d:" opt; do
+        case "$opt" in
+            h)
+                print_help
+                exit 0
+                ;;
+            0)
+                NULL_TERMINATED=1
+                ;;
+            d)
+                depth="$OPTARG"
+                ;;
+            *)
+                print_help
+                exit 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
     if is_empty_array "$@"; then
-        bredth_first $depth "./"
+        breadth_first $depth "."
     else
-        bredth_first $depth "$@"
+        breadth_first $depth "$@"
     fi
 }; main "$@"
